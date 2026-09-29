@@ -72,6 +72,8 @@ function LectureHome() {
   return (
     <div className="app">
 
+      {/* Navbar */}
+
       <nav className="navbar navbar-dark">
         <div className="container">
 
@@ -90,6 +92,8 @@ function LectureHome() {
 
         </div>
       </nav>
+
+      {/* Password Sidebar */}
 
       {showPasswords && (
         <>
@@ -184,6 +188,8 @@ function LectureHome() {
           </div>
         </>
       )}
+
+      {/* Main Content */}
 
       <div className="container py-5">
 
@@ -341,6 +347,17 @@ function LectureHome() {
 
       </div>
 
+      {/* Footer */}
+
+      <footer className="text-center py-4">
+
+        <p className="mb-0 text-muted">
+          Made by{" "}
+          <strong>Malak Elsharkawy</strong> ❤️
+        </p>
+
+      </footer>
+
     </div>
   );
 }
@@ -371,6 +388,7 @@ function App() {
 
   return (
     <BrowserRouter>
+
       <Routes>
 
         <Route
@@ -386,6 +404,7 @@ function App() {
         />
 
       </Routes>
+
     </BrowserRouter>
   );
 }
