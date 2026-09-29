@@ -72,8 +72,6 @@ function LectureHome() {
   return (
     <div className="app">
 
-      {/* Navbar */}
-
       <nav className="navbar navbar-dark">
         <div className="container">
 
@@ -92,8 +90,6 @@ function LectureHome() {
 
         </div>
       </nav>
-
-      {/* Password Sidebar */}
 
       {showPasswords && (
         <>
@@ -189,8 +185,6 @@ function LectureHome() {
         </>
       )}
 
-      {/* Main Content */}
-
       <div className="container py-5">
 
         {!selectedSubject ? (
@@ -217,7 +211,6 @@ function LectureHome() {
                   ).length;
 
                 return (
-
                   <div
                     className="col-md-6 col-lg-4"
                     key={subject}
@@ -250,11 +243,22 @@ function LectureHome() {
                     </div>
 
                   </div>
-
                 );
               })}
 
             </div>
+
+            {/* Footer - Subjects Page Only */}
+
+            <footer className="text-center py-5">
+
+              <p className="mb-0 text-muted">
+                Made by{" "}
+                <strong>Malak Elsharkawy</strong> ❤️
+              </p>
+
+            </footer>
+
           </>
 
         ) : (
@@ -346,17 +350,6 @@ function LectureHome() {
         )}
 
       </div>
-
-      {/* Footer */}
-
-      <footer className="text-center py-4">
-
-        <p className="mb-0 text-muted">
-          Made by{" "}
-          <strong>Malak Elsharkawy</strong> ❤️
-        </p>
-
-      </footer>
 
     </div>
   );
