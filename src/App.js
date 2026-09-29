@@ -1,7 +1,15 @@
-import React, { useEffect, useState } from "react";
-import "./App.css";
 
-function App() {
+import React, { useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { onAuthStateChanged } from "firebase/auth";
+
+import "./App.css";
+import { db, auth } from "./firebase";
+import { collection, getDocs } from "firebase/firestore";
+import Admin from "./Admin";
+import AdminLogin from "./AdminLogin";
+
+function LectureHome() {
   const subjects = [
     "Computer Graphics",
     "Communication Technology",
@@ -10,125 +18,34 @@ function App() {
     "Selected Labs",
   ];
 
-  // Lectures
-  const [lectures, setLectures] = useState(() => {
-    const saved = localStorage.getItem("lectures");
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // Passwords
-  const [passwords, setPasswords] = useState(() => {
-    const saved = localStorage.getItem("lecturePasswords");
-    return saved ? JSON.parse(saved) : [];
-  });
-
+  const [lectures, setLectures] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState(null);
+  const [showPasswords, setShowPasswords] = useState(false);
 
-  const [showPasswords, setShowPasswords] =
-    useState(false);
-
-  const [showAddPassword, setShowAddPassword] =
-    useState(false);
-
-  const [passwordSubject, setPasswordSubject] =
-    useState("Computer Graphics");
-
-  const [newPassword, setNewPassword] = useState("");
-
-  // Lecture Form
-  const [lectureTitle, setLectureTitle] = useState("");
-  const [lectureLink, setLectureLink] = useState("");
-
-  // Save Lectures
   useEffect(() => {
-    localStorage.setItem(
-      "lectures",
-      JSON.stringify(lectures)
-    );
-  }, [lectures]);
+    const fetchLectures = async () => {
+      try {
+        const querySnapshot = await getDocs(
+          collection(db, "lectures")
+        );
 
-  // Save Passwords
-  useEffect(() => {
-    localStorage.setItem(
-      "lecturePasswords",
-      JSON.stringify(passwords)
-    );
-  }, [passwords]);
+        const lecturesData = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
 
-  // =========================
-  // ADD LECTURE
-  // =========================
-
-  const addLecture = (e) => {
-    e.preventDefault();
-
-    if (
-      !lectureTitle.trim() ||
-      !lectureLink.trim()
-    ) {
-      alert("Please fill all fields");
-      return;
-    }
-
-    const newLecture = {
-      id: Date.now(),
-      subject: selectedSubject,
-      title: lectureTitle,
-      link: lectureLink,
+        setLectures(lecturesData);
+      } catch (error) {
+        console.error("Error getting lectures:", error);
+      }
     };
 
-    setLectures([...lectures, newLecture]);
-
-    setLectureTitle("");
-    setLectureLink("");
-  };
-
-  // =========================
-  // OPEN LECTURE
-  // =========================
+    fetchLectures();
+  }, []);
 
   const openLecture = (lecture) => {
     window.open(lecture.link, "_blank");
   };
-
-  // =========================
-  // ADD PASSWORD
-  // =========================
-
-  const addPassword = (e) => {
-    e.preventDefault();
-
-    if (!newPassword.trim()) {
-      alert("Please enter password");
-      return;
-    }
-
-    const subjectPasswords = passwords.filter(
-      (item) => item.subject === passwordSubject
-    );
-
-    const lectureNumber =
-      subjectPasswords.length + 1;
-
-    const newPasswordItem = {
-      id: Date.now(),
-      subject: passwordSubject,
-      lectureNumber: lectureNumber,
-      password: newPassword,
-    };
-
-    setPasswords([
-      ...passwords,
-      newPasswordItem,
-    ]);
-
-    setNewPassword("");
-    setShowAddPassword(false);
-  };
-
-  // =========================
-  // COPY PASSWORD
-  // =========================
 
   const copyPassword = async (password) => {
     try {
@@ -139,63 +56,13 @@ function App() {
     }
   };
 
-  // =========================
-  // DELETE PASSWORD
-  // =========================
-
-  const deletePassword = (id) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this password?"
-    );
-
-    if (!confirmed) return;
-
-    const passwordToDelete = passwords.find(
-      (item) => item.id === id
-    );
-
-    if (!passwordToDelete) return;
-
-    const subject = passwordToDelete.subject;
-
-    const updatedPasswords = passwords.filter(
-      (item) => item.id !== id
-    );
-
-    let number = 1;
-
-    const reorderedPasswords =
-      updatedPasswords.map((item) => {
-        if (item.subject === subject) {
-          const updatedItem = {
-            ...item,
-            lectureNumber: number,
-          };
-
-          number++;
-
-          return updatedItem;
-        }
-
-        return item;
-      });
-
-    setPasswords(reorderedPasswords);
-  };
-
-  // =========================
-  // GET SUBJECT PASSWORDS
-  // =========================
-
   const getSubjectPasswords = (subject) => {
-    return passwords.filter(
-      (item) => item.subject === subject
+    return lectures.filter(
+      (lecture) =>
+        lecture.subject === subject &&
+        lecture.password
     );
   };
-
-  // =========================
-  // SUBJECT LECTURES
-  // =========================
 
   const subjectLectures = lectures.filter(
     (lecture) =>
@@ -204,10 +71,6 @@ function App() {
 
   return (
     <div className="app">
-
-      {/* =========================
-          NAVBAR
-      ========================= */}
 
       <nav className="navbar navbar-dark">
         <div className="container">
@@ -227,10 +90,6 @@ function App() {
 
         </div>
       </nav>
-
-      {/* =========================
-          PASSWORD SIDEBAR
-      ========================= */}
 
       {showPasswords && (
         <>
@@ -256,83 +115,6 @@ function App() {
 
             </div>
 
-            {/* ADD PASSWORD BUTTON */}
-
-            <button
-              className="btn btn-primary w-100 mb-4"
-              onClick={() =>
-                setShowAddPassword(
-                  !showAddPassword
-                )
-              }
-            >
-              ➕ Add Password
-            </button>
-
-            {/* ADD PASSWORD FORM */}
-
-            {showAddPassword && (
-              <div className="password-add-card">
-
-                <h6 className="mb-3">
-                  Add New Password
-                </h6>
-
-                <form onSubmit={addPassword}>
-
-                  <label className="form-label">
-                    Subject
-                  </label>
-
-                  <select
-                    className="form-select mb-3"
-                    value={passwordSubject}
-                    onChange={(e) =>
-                      setPasswordSubject(
-                        e.target.value
-                      )
-                    }
-                  >
-                    {subjects.map((subject) => (
-                      <option
-                        key={subject}
-                        value={subject}
-                      >
-                        {subject}
-                      </option>
-                    ))}
-                  </select>
-
-                  <label className="form-label">
-                    Password
-                  </label>
-
-                  <input
-                    type="text"
-                    className="form-control mb-3"
-                    placeholder="Enter password..."
-                    value={newPassword}
-                    onChange={(e) =>
-                      setNewPassword(
-                        e.target.value
-                      )
-                    }
-                  />
-
-                  <button
-                    type="submit"
-                    className="btn btn-success w-100"
-                  >
-                    Save Password
-                  </button>
-
-                </form>
-
-              </div>
-            )}
-
-            {/* PASSWORD LIST */}
-
             {subjects.map((subject) => {
 
               const subjectPasswords =
@@ -349,57 +131,50 @@ function App() {
                   </h6>
 
                   {subjectPasswords.length === 0 ? (
+
                     <p className="text-muted small">
                       No passwords yet
                     </p>
+
                   ) : (
+
                     subjectPasswords.map(
-                      (item) => (
+                      (item, index) => (
+
                         <div
                           className="password-item"
                           key={item.id}
                         >
 
                           <div>
+
                             <strong>
-                              Lecture{" "}
-                              {item.lectureNumber}
+                              {item.lecture ||
+                                `Lecture ${index + 1}`}
                             </strong>
 
                             <div className="password-text">
                               🔑 {item.password}
                             </div>
-                          </div>
-
-                          <div className="d-flex gap-2">
-
-                            <button
-                              className="btn btn-sm btn-primary"
-                              onClick={() =>
-                                copyPassword(
-                                  item.password
-                                )
-                              }
-                            >
-                              📋
-                            </button>
-
-                            <button
-                              className="btn btn-sm btn-danger"
-                              onClick={() =>
-                                deletePassword(
-                                  item.id
-                                )
-                              }
-                            >
-                              🗑️
-                            </button>
 
                           </div>
+
+                          <button
+                            className="btn btn-sm btn-primary"
+                            onClick={() =>
+                              copyPassword(
+                                item.password
+                              )
+                            }
+                          >
+                            📋
+                          </button>
 
                         </div>
+
                       )
                     )
+
                   )}
 
                 </div>
@@ -410,16 +185,11 @@ function App() {
         </>
       )}
 
-      {/* =========================
-          MAIN CONTENT
-      ========================= */}
-
       <div className="container py-5">
 
         {!selectedSubject ? (
-          <>
-            {/* HOME */}
 
+          <>
             <div className="text-center mb-5">
 
               <h1>📚 My Lectures</h1>
@@ -441,6 +211,7 @@ function App() {
                   ).length;
 
                 return (
+
                   <div
                     className="col-md-6 col-lg-4"
                     key={subject}
@@ -449,9 +220,7 @@ function App() {
                     <div
                       className="folder"
                       onClick={() =>
-                        setSelectedSubject(
-                          subject
-                        )
+                        setSelectedSubject(subject)
                       }
                     >
 
@@ -475,15 +244,16 @@ function App() {
                     </div>
 
                   </div>
+
                 );
               })}
 
             </div>
           </>
-        ) : (
-          <>
-            {/* SUBJECT PAGE */}
 
+        ) : (
+
+          <>
             <button
               className="btn btn-outline-secondary mb-4"
               onClick={() =>
@@ -508,81 +278,6 @@ function App() {
 
             </div>
 
-            {/* ADD LECTURE */}
-
-            <div className="card shadow-sm add-card mb-5">
-
-              <div className="card-body">
-
-                <h4 className="mb-4">
-                  ➕ Add Lecture
-                </h4>
-
-                <form onSubmit={addLecture}>
-
-                  <div className="row g-3">
-
-                    <div className="col-12">
-
-                      <label className="form-label">
-                        Lecture Title
-                      </label>
-
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="e.g. Lecture 1"
-                        value={lectureTitle}
-                        onChange={(e) =>
-                          setLectureTitle(
-                            e.target.value
-                          )
-                        }
-                      />
-
-                    </div>
-
-                    <div className="col-12">
-
-                      <label className="form-label">
-                        Lecture Link
-                      </label>
-
-                      <input
-                        type="url"
-                        className="form-control"
-                        placeholder="Paste lecture link here..."
-                        value={lectureLink}
-                        onChange={(e) =>
-                          setLectureLink(
-                            e.target.value
-                          )
-                        }
-                      />
-
-                    </div>
-
-                    <div className="col-12">
-
-                      <button
-                        type="submit"
-                        className="btn btn-primary"
-                      >
-                        Add Lecture
-                      </button>
-
-                    </div>
-
-                  </div>
-
-                </form>
-
-              </div>
-
-            </div>
-
-            {/* LECTURES */}
-
             <div className="row g-4">
 
               {subjectLectures.length === 0 ? (
@@ -594,7 +289,7 @@ function App() {
                   </h4>
 
                   <p>
-                    Add your first lecture above.
+                    No lectures have been added yet.
                   </p>
 
                 </div>
@@ -616,15 +311,14 @@ function App() {
                         </div>
 
                         <h5>
-                          {lecture.title}
+                          {lecture.lecture ||
+                            lecture.title}
                         </h5>
 
                         <button
                           className="btn btn-success w-100"
                           onClick={() =>
-                            openLecture(
-                              lecture
-                            )
+                            openLecture(lecture)
                           }
                         >
                           🔗 Open Lecture
@@ -640,7 +334,9 @@ function App() {
               )}
 
             </div>
+
           </>
+
         )}
 
       </div>
@@ -649,4 +345,50 @@ function App() {
   );
 }
 
+function App() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (currentUser) => {
+        setUser(currentUser);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="text-center py-5">
+        Loading...
+      </div>
+    );
+  }
+
+  return (
+    <BrowserRouter>
+      <Routes>
+
+        <Route
+          path="/"
+          element={<LectureHome />}
+        />
+
+        <Route
+          path="/admin"
+          element={
+            user ? <Admin /> : <AdminLogin />
+          }
+        />
+
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
 export default App;
+
